@@ -52,9 +52,9 @@ const Dashboard = () => {
           <button className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10 transition-all" title="Settings">
             <Settings className="w-5 h-5" />
           </button>
-          <Link to="/" className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10 transition-all" title="Sign Out">
+          <button onClick={async () => { await signOut(); navigate("/"); }} className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10 transition-all" title="Sign Out">
             <LogOut className="w-5 h-5" />
-          </Link>
+          </button>
         </div>
       </div>
 
