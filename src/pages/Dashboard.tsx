@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MessageCircle, Phone, Video, Users, Settings, LogOut, Search, Bell, Wallet, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
 
 const conversations = [
   { id: 1, name: "Priya Sharma", lastMessage: "See you in the study room!", time: "2m", unread: 3, online: true },
