@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MessageCircle, Phone, Video, Users, Settings, LogOut, Search, Bell, Wallet, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
 
 const conversations = [
   { id: 1, name: "Priya Sharma", lastMessage: "See you in the study room!", time: "2m", unread: 3, online: true },
@@ -22,6 +23,8 @@ const sidebarLinks = [
 
 const Dashboard = () => {
   const [selectedChat, setSelectedChat] = useState<number | null>(1);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="h-screen bg-background flex">
@@ -49,9 +52,9 @@ const Dashboard = () => {
           <button className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10 transition-all" title="Settings">
             <Settings className="w-5 h-5" />
           </button>
-          <Link to="/" className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10 transition-all" title="Sign Out">
+          <button onClick={async () => { await signOut(); navigate("/"); }} className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10 transition-all" title="Sign Out">
             <LogOut className="w-5 h-5" />
-          </Link>
+          </button>
         </div>
       </div>
 
