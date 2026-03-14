@@ -1,13 +1,37 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Phone } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast({ title: "Please fill in all fields", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    const { error } = await signIn(email, password);
+    setIsLoading(false);
+    if (error) {
+      toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
+    } else {
+      navigate("/dashboard");
+    }
+  };
 
   return (
     <div className="min-h-screen gradient-hero flex items-center justify-center px-6">
@@ -28,15 +52,17 @@ const Login = () => {
         </div>
 
         <div className="bg-card rounded-3xl p-8 shadow-premium gold-dust-border">
-          <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <Label htmlFor="phone" className="font-body text-sm text-foreground">Phone Number</Label>
+              <Label htmlFor="email" className="font-body text-sm text-foreground">Email</Label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+91 98765 43210"
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 h-12 rounded-xl bg-background font-body"
                 />
               </div>
@@ -45,11 +71,14 @@ const Login = () => {
             <div className="space-y-2">
               <Label htmlFor="password" className="font-body text-sm text-foreground">Password</Label>
               <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
-                  className="pr-10 h-12 rounded-xl bg-background font-body"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 pr-10 h-12 rounded-xl bg-background font-body"
                 />
                 <button
                   type="button"
@@ -61,8 +90,8 @@ const Login = () => {
               </div>
             </div>
 
-            <Button variant="gold" size="lg" className="w-full">
-              Sign In
+            <Button variant="gold" size="lg" className="w-full" disabled={isLoading}>
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
 
