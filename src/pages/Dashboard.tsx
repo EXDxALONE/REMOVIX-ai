@@ -23,6 +23,8 @@ const sidebarLinks = [
 
 const Dashboard = () => {
   const [selectedChat, setSelectedChat] = useState<number | null>(1);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="h-screen bg-background flex">
