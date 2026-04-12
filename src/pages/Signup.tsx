@@ -57,21 +57,22 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-hero flex items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
+      <div className="absolute inset-0 gradient-hero pointer-events-none" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md"
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md relative z-10"
       >
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
-              <span className="font-display text-secondary font-semibold">A</span>
+            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
+              <span className="font-display text-white font-bold">R</span>
             </div>
           </Link>
-          <h1 className="text-3xl font-display font-light text-foreground">Join AIdea</h1>
-          <p className="text-muted-foreground font-body mt-2">Create your verified account</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">Create your account</h1>
+          <p className="text-muted-foreground font-body mt-2">Start removing backgrounds for free</p>
         </div>
 
         {/* Progress */}
@@ -80,13 +81,13 @@ const Signup = () => {
             <div
               key={s}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                s === step ? "w-8 bg-primary" : s < step ? "w-8 bg-primary/50" : "w-8 bg-muted"
+                s === step ? "w-8 gradient-primary" : s < step ? "w-8 bg-primary/50" : "w-8 bg-muted"
               }`}
             />
           ))}
         </div>
 
-        <div className="bg-card rounded-3xl p-8 shadow-premium gold-dust-border">
+        <div className="glass-card rounded-2xl p-8">
           {step === 1 && (
             <motion.form
               key="step1"
@@ -104,7 +105,7 @@ const Signup = () => {
                     placeholder="Choose a username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 h-12 rounded-xl bg-background font-body"
+                    className="pl-10 h-12 rounded-lg bg-secondary border-border font-body"
                   />
                 </div>
               </div>
@@ -118,11 +119,11 @@ const Signup = () => {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-12 rounded-xl bg-background font-body"
+                    className="pl-10 h-12 rounded-lg bg-secondary border-border font-body"
                   />
                 </div>
               </div>
-              <Button variant="gold" size="lg" className="w-full" type="submit">Continue</Button>
+              <Button variant="gradient" size="lg" className="w-full" type="submit">Continue</Button>
             </motion.form>
           )}
 
@@ -144,7 +145,7 @@ const Signup = () => {
                     placeholder="Create a secure password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 h-12 rounded-xl bg-background font-body"
+                    className="pl-10 pr-10 h-12 rounded-lg bg-secondary border-border font-body"
                   />
                   <button
                     type="button"
@@ -165,13 +166,13 @@ const Signup = () => {
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 h-12 rounded-xl bg-background font-body"
+                    className="pl-10 h-12 rounded-lg bg-secondary border-border font-body"
                   />
                 </div>
               </div>
               <div className="flex gap-3">
                 <Button variant="outline" size="lg" className="flex-1" type="button" onClick={() => setStep(1)}>Back</Button>
-                <Button variant="gold" size="lg" className="flex-1" type="submit" disabled={isLoading}>
+                <Button variant="gradient" size="lg" className="flex-1" type="submit" disabled={isLoading}>
                   {isLoading ? "Creating..." : "Create Account"}
                 </Button>
               </div>
@@ -185,17 +186,17 @@ const Signup = () => {
               animate={{ opacity: 1, x: 0 }}
               className="space-y-6 text-center"
             >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                <Shield className="w-8 h-8 text-primary" />
+              <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto">
+                <Shield className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h3 className="font-display text-xl text-foreground mb-2">Check your email</h3>
+                <h3 className="font-display text-xl font-semibold text-foreground mb-2">Check your email</h3>
                 <p className="text-sm text-muted-foreground font-body leading-relaxed">
-                  We've sent a verification link to <strong className="text-foreground">{email}</strong>. 
+                  We've sent a verification link to <strong className="text-foreground">{email}</strong>.
                   Click the link to verify your account and get started.
                 </p>
               </div>
-              <Button variant="gold" size="lg" className="w-full" onClick={() => navigate("/login")}>
+              <Button variant="gradient" size="lg" className="w-full" onClick={() => navigate("/login")}>
                 Go to Sign In
               </Button>
             </motion.div>
@@ -204,7 +205,7 @@ const Signup = () => {
           {step !== 3 && (
             <div className="mt-6 text-center">
               <p className="text-sm font-body text-muted-foreground">
-                Already a member?{" "}
+                Already have an account?{" "}
                 <Link to="/login" className="text-primary hover:underline font-medium">Sign in</Link>
               </p>
             </div>

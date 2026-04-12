@@ -9,22 +9,24 @@ const Navbar = () => {
 
   const navLinks = [
     { label: "Features", href: "#features" },
-    { label: "Community", href: "#community" },
+    { label: "How it Works", href: "#how-it-works" },
     { label: "Pricing", href: "/pricing" },
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/30">
       <div className="container mx-auto flex items-center justify-between h-16 px-6">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center">
-            <span className="font-display text-secondary font-semibold text-sm">A</span>
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+            <span className="font-display text-white font-bold text-sm">R</span>
           </div>
-          <span className="font-display text-2xl font-light tracking-tight text-foreground">AIdea</span>
+          <span className="font-display text-xl font-bold tracking-tight text-foreground">
+            Removix <span className="text-gradient">AI</span>
+          </span>
         </Link>
 
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
+          {navLinks.map((link) =>
             link.href.startsWith("/") ? (
               <Link
                 key={link.label}
@@ -42,15 +44,15 @@ const Navbar = () => {
                 {link.label}
               </a>
             )
-          ))}
+          )}
         </div>
 
         <div className="hidden md:flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link to="/login">Sign In</Link>
           </Button>
-          <Button variant="gold" size="sm" asChild>
-            <Link to="/signup">Get Started</Link>
+          <Button variant="gradient" size="sm" asChild>
+            <Link to="/signup">Get Started Free</Link>
           </Button>
         </div>
 
@@ -71,7 +73,7 @@ const Navbar = () => {
             className="md:hidden bg-background border-b border-border"
           >
             <div className="container mx-auto px-6 py-4 flex flex-col gap-4">
-              {navLinks.map((link) => (
+              {navLinks.map((link) =>
                 link.href.startsWith("/") ? (
                   <Link
                     key={link.label}
@@ -91,12 +93,12 @@ const Navbar = () => {
                     {link.label}
                   </a>
                 )
-              ))}
+              )}
               <div className="flex gap-3 pt-2">
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/login">Sign In</Link>
                 </Button>
-                <Button variant="gold" size="sm" asChild>
+                <Button variant="gradient" size="sm" asChild>
                   <Link to="/signup">Get Started</Link>
                 </Button>
               </div>

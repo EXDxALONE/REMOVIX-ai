@@ -1,15 +1,16 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Shield, MessageCircle, Video } from "lucide-react";
+import { Upload, Zap, Download, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const HeroSection = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center gradient-hero overflow-hidden pt-16">
-      {/* Subtle decorative elements */}
+      {/* Decorative orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 rounded-full bg-secondary/5 blur-3xl" />
+        <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] rounded-full bg-primary/8 blur-[100px]" />
+        <div className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] rounded-full bg-accent/8 blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-cyan/5 blur-[80px]" />
       </div>
 
       <div className="container mx-auto px-6 relative z-10">
@@ -17,70 +18,73 @@ const HeroSection = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6 }}
             className="mb-6"
           >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-body font-medium gold-dust-border">
-              <Shield className="w-3.5 h-3.5" />
-              Verified & Encrypted
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-body font-medium neon-border">
+              <Sparkles className="w-3.5 h-3.5" />
+              AI-Powered Background Removal
             </span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-5xl sm:text-7xl lg:text-8xl font-display font-light tracking-tight text-foreground mb-6"
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-5xl sm:text-7xl lg:text-8xl font-display font-bold tracking-tight text-foreground mb-6"
           >
-            A more refined way
+            Remove backgrounds
             <br />
-            <span className="text-primary">to connect.</span>
+            <span className="text-gradient">in seconds.</span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg sm:text-xl text-muted-foreground font-body max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            AIdea is India's premium communication sanctuary. Chat freely, study together, 
-            and build meaningful connections — all within a verified, encrypted space.
+            Upload any image and get a clean, transparent background instantly.
+            Powered by advanced AI for pixel-perfect results every time.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
           >
-            <Button variant="gold" size="xl" asChild>
-              <Link to="/signup">Join AIdea</Link>
+            <Button variant="gradient" size="xl" asChild>
+              <Link to="/signup">
+                <Upload className="w-5 h-5" />
+                Start Removing — Free
+              </Link>
             </Button>
             <Button variant="outline" size="xl" asChild>
-              <Link to="#features">Explore Features</Link>
+              <a href="#how-it-works">See How It Works</a>
             </Button>
           </motion.div>
 
-          {/* Feature pills */}
+          {/* Stats */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground font-body"
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground font-body"
           >
             <div className="flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 text-primary" />
-              <span>Unlimited Messaging</span>
+              <Zap className="w-4 h-4 text-cyan" />
+              <span>&lt;5s Processing</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-border hidden sm:block" />
             <div className="flex items-center gap-2">
-              <Video className="w-4 h-4 text-primary" />
-              <span>HD Video Rooms</span>
+              <Download className="w-4 h-4 text-primary" />
+              <span>HD Downloads</span>
             </div>
             <div className="w-1 h-1 rounded-full bg-border hidden sm:block" />
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-primary" />
-              <span>ID Verified Users</span>
+              <Sparkles className="w-4 h-4 text-accent" />
+              <span>5 Free Images/Day</span>
             </div>
           </motion.div>
         </div>

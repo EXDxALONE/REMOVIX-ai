@@ -34,24 +34,25 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-hero flex items-center justify-center px-6">
+    <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="absolute inset-0 gradient-hero pointer-events-none" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md"
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md relative z-10"
       >
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
-              <span className="font-display text-secondary font-semibold">A</span>
+            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
+              <span className="font-display text-white font-bold">R</span>
             </div>
           </Link>
-          <h1 className="text-3xl font-display font-light text-foreground">Welcome back</h1>
-          <p className="text-muted-foreground font-body mt-2">Sign in to your sanctuary</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">Welcome back</h1>
+          <p className="text-muted-foreground font-body mt-2">Sign in to your account</p>
         </div>
 
-        <div className="bg-card rounded-3xl p-8 shadow-premium gold-dust-border">
+        <div className="glass-card rounded-2xl p-8">
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor="email" className="font-body text-sm text-foreground">Email</Label>
@@ -63,7 +64,7 @@ const Login = () => {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-12 rounded-xl bg-background font-body"
+                  className="pl-10 h-12 rounded-lg bg-secondary border-border font-body"
                 />
               </div>
             </div>
@@ -78,7 +79,7 @@ const Login = () => {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10 h-12 rounded-xl bg-background font-body"
+                  className="pl-10 pr-10 h-12 rounded-lg bg-secondary border-border font-body"
                 />
                 <button
                   type="button"
@@ -90,7 +91,7 @@ const Login = () => {
               </div>
             </div>
 
-            <Button variant="gold" size="lg" className="w-full" disabled={isLoading}>
+            <Button variant="gradient" size="lg" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
@@ -99,7 +100,7 @@ const Login = () => {
             <p className="text-sm font-body text-muted-foreground">
               Don't have an account?{" "}
               <Link to="/signup" className="text-primary hover:underline font-medium">
-                Join AIdea
+                Sign up free
               </Link>
             </p>
           </div>

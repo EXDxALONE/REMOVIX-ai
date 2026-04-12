@@ -1,102 +1,97 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { BookOpen, Users, Headphones } from "lucide-react";
+import { Upload, Wand2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const rooms = [
-  { name: "UPSC Prep", members: 1240, icon: BookOpen, active: true },
-  { name: "JEE Advanced", members: 890, icon: BookOpen, active: false },
-  { name: "Music Lounge", members: 340, icon: Headphones, active: true },
-  { name: "Book Club", members: 560, icon: Users, active: false },
+const steps = [
+  {
+    num: "01",
+    icon: Upload,
+    title: "Upload Your Image",
+    description: "Drag and drop or click to upload. Supports JPG, PNG, and WEBP up to 10MB.",
+  },
+  {
+    num: "02",
+    icon: Wand2,
+    title: "AI Removes Background",
+    description: "Our AI processes your image in seconds, detecting edges with pixel-perfect accuracy.",
+  },
+  {
+    num: "03",
+    icon: Download,
+    title: "Download Result",
+    description: "Preview the before/after comparison and download your transparent PNG instantly.",
+  },
 ];
 
-const CommunitySection = () => {
+const HowItWorksSection = () => {
   return (
-    <section id="community" className="py-24 sm:py-32 bg-card/50">
+    <section id="how-it-works" className="py-24 sm:py-32 bg-card/30">
       <div className="container mx-auto px-6">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <motion.span
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-sm font-body text-primary font-medium uppercase tracking-wider"
-            >
-              Study Halls
-            </motion.span>
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="text-4xl sm:text-5xl font-display font-light text-foreground mt-3 mb-6"
-            >
-              Your digital
-              <br />study sanctuary.
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="text-muted-foreground font-body text-lg leading-relaxed mb-8"
-            >
-              Join curated study halls and community rooms. Collaborate with verified 
-              peers in voice and video rooms designed for focused learning.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-            >
-              <Button variant="gold" size="lg" asChild>
-                <Link to="/signup">Explore Halls</Link>
-              </Button>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <motion.span
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="space-y-4"
+            className="text-sm font-body text-primary font-semibold uppercase tracking-wider"
           >
-            {rooms.map((room, i) => (
-              <motion.div
-                key={room.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 * i, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                className="flex items-center justify-between p-4 rounded-2xl bg-background gold-dust-border shadow-card"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                    <room.icon className="w-5 h-5 text-secondary-foreground" />
-                  </div>
-                  <div>
-                    <h4 className="font-body font-medium text-foreground">{room.name}</h4>
-                    <p className="text-sm text-muted-foreground font-body">{room.members.toLocaleString()} members</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {room.active && (
-                    <span className="flex items-center gap-1.5 text-xs font-body text-primary">
-                      <span className="w-2 h-2 rounded-full bg-primary animate-gold-pulse" />
-                      Live
-                    </span>
-                  )}
-                  <Button variant="outline" size="sm">Join</Button>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+            How it Works
+          </motion.span>
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="text-4xl sm:text-5xl font-display font-bold text-foreground mt-3 mb-4"
+          >
+            Three simple steps to
+            <br /><span className="text-gradient">clean backgrounds.</span>
+          </motion.h2>
         </div>
+
+        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          {steps.map((step, i) => (
+            <motion.div
+              key={step.num}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.15 * i, duration: 0.5 }}
+              className="relative text-center"
+            >
+              <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-5 shadow-premium">
+                <step.icon className="w-7 h-7 text-white" />
+              </div>
+              <span className="text-xs font-body font-bold text-primary uppercase tracking-widest mb-2 block">
+                Step {step.num}
+              </span>
+              <h3 className="font-display text-xl font-semibold text-foreground mb-2">{step.title}</h3>
+              <p className="text-sm text-muted-foreground font-body leading-relaxed">{step.description}</p>
+              {i < steps.length - 1 && (
+                <div className="hidden md:block absolute top-8 -right-4 w-8 text-border">
+                  <svg viewBox="0 0 24 8" fill="none" className="w-full">
+                    <path d="M0 4h20m0 0l-4-4m4 4l-4 4" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.5 }}
+          className="text-center mt-12"
+        >
+          <Button variant="gradient" size="lg" asChild>
+            <Link to="/signup">Try It Now — Free</Link>
+          </Button>
+        </motion.div>
       </div>
     </section>
   );
 };
 
-export default CommunitySection;
+export default HowItWorksSection;
