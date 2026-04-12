@@ -5,22 +5,22 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium font-body ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold font-body uppercase tracking-wide ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.97]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 rounded-full",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-full",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-full",
-        ghost: "hover:bg-accent hover:text-accent-foreground rounded-lg",
+        outline: "border border-border bg-transparent text-foreground hover:bg-secondary rounded-lg",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg",
+        ghost: "hover:bg-secondary hover:text-foreground rounded-lg",
         link: "text-primary underline-offset-4 hover:underline",
-        gold: "gradient-gold text-secondary shadow-gold hover:opacity-90 rounded-full font-medium",
-        emerald: "bg-secondary text-secondary-foreground hover:bg-emerald-light rounded-full",
+        gradient: "gradient-primary text-white shadow-premium hover:opacity-90 rounded-lg font-bold",
+        neon: "bg-transparent border border-cyan text-cyan hover:bg-cyan/10 glow-cyan rounded-lg",
       },
       size: {
         default: "h-10 px-6 py-2",
-        sm: "h-9 px-4",
+        sm: "h-9 px-4 text-xs",
         lg: "h-12 px-8 text-base",
         xl: "h-14 px-10 text-lg",
         icon: "h-10 w-10",
