@@ -1,415 +1,325 @@
-import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
-  MessageCircle, Phone, Video, Users, Settings, LogOut,
-  Search, Bell, Wallet, Plus, Send, ArrowLeft, UserPlus
+  Upload, Download, Image, LogOut, Zap, History,
+  CreditCard, Settings, X, Check, AlertCircle, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  useConversations,
-  useMessages,
-  useCreateConversation,
-  useSearchUsers,
-  type ConversationWithDetails,
-} from "@/hooks/useChat";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
-const sidebarLinks = [
-  { icon: MessageCircle, label: "Chats", active: true },
-  { icon: Phone, label: "Calls" },
-  { icon: Video, label: "Rooms" },
-  { icon: Users, label: "Community" },
-];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-function getInitials(name: string | null | undefined): string {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-function formatTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return "now";
-  if (diffMins < 60) return `${diffMins}m`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d`;
-}
-
-function statusIcon(status: string): string {
-  if (status === "read") return "✓✓";
-  if (status === "delivered") return "✓✓";
-  return "✓";
-}
-
-function NewChatDialog({ onCreated }: { onCreated: () => void }) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [results, setResults] = useState<{ user_id: string; display_name: string | null; username: string | null; avatar_url: string | null }[]>([]);
-  const [creating, setCreating] = useState(false);
-  const [open, setOpen] = useState(false);
-  const { searchUsers } = useSearchUsers();
-  const { createDM } = useCreateConversation();
-
-  const handleSearch = async (q: string) => {
-    setSearchQuery(q);
-    if (q.length >= 2) {
-      const r = await searchUsers(q);
-      setResults(r);
-    } else {
-      setResults([]);
-    }
-  };
-
-  const handleSelect = async (userId: string) => {
-    setCreating(true);
-    const { error } = await createDM(userId);
-    setCreating(false);
-    if (!error) {
-      setOpen(false);
-      setSearchQuery("");
-      setResults([]);
-      onCreated();
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
-          <UserPlus className="w-4 h-4" />
-        </button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-display text-xl">New Conversation</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by username or name..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-9 h-10 rounded-xl bg-background font-body"
-            />
-          </div>
-          <div className="max-h-60 overflow-y-auto space-y-1">
-            {results.length === 0 && searchQuery.length >= 2 && (
-              <p className="text-sm text-muted-foreground font-body text-center py-4">No users found</p>
-            )}
-            {results.map((u) => (
-              <button
-                key={u.user_id}
-                onClick={() => handleSelect(u.user_id)}
-                disabled={creating}
-                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors text-left"
-              >
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                  <span className="font-display text-secondary-foreground text-xs font-medium">
-                    {getInitials(u.display_name || u.username)}
-                  </span>
-                </div>
-                <div>
-                  <p className="font-body font-medium text-sm text-foreground">{u.display_name || u.username || "User"}</p>
-                  {u.username && <p className="text-xs text-muted-foreground font-body">@{u.username}</p>}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+type ProcessingState = "idle" | "uploading" | "processing" | "done" | "error";
 
 const Dashboard = () => {
-  const [selectedConvoId, setSelectedConvoId] = useState<string | null>(null);
-  const [messageInput, setMessageInput] = useState("");
-  const [mobileShowChat, setMobileShowChat] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [state, setState] = useState<ProcessingState>("idle");
+  const [progress, setProgress] = useState(0);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [showBefore, setShowBefore] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { conversations, loading: convosLoading, refetch } = useConversations();
-  const { messages, loading: msgsLoading, sendMessage } = useMessages(selectedConvoId);
+  const { toast } = useToast();
 
-  const selectedConvo = conversations.find((c) => c.id === selectedConvoId) ?? null;
-
-  // Get display name for the other person in a DM
-  const getConvoDisplayName = (convo: ConversationWithDetails): string => {
-    if (convo.is_group && convo.name) return convo.name;
-    const other = convo.members.find((m) => m.user_id !== user?.id);
-    return other?.display_name || other?.username || "Unknown";
+  const validateFile = (f: File): string | null => {
+    if (!ALLOWED_TYPES.includes(f.type)) return "Unsupported format. Use JPG, PNG, or WEBP.";
+    if (f.size > MAX_FILE_SIZE) return "File too large. Max 10MB.";
+    return null;
   };
 
-  const getConvoInitials = (convo: ConversationWithDetails): string => {
-    return getInitials(getConvoDisplayName(convo));
-  };
-
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleSend = async () => {
-    if (!messageInput.trim()) return;
-    const content = messageInput;
-    setMessageInput("");
-    await sendMessage(content);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  const handleFile = useCallback((f: File) => {
+    const err = validateFile(f);
+    if (err) {
+      toast({ title: err, variant: "destructive" });
+      return;
     }
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+    setResultUrl(null);
+    setState("idle");
+    setErrorMsg("");
+  }, [toast]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  }, [handleFile]);
+
+  const handleProcess = async () => {
+    if (!file) return;
+    setState("uploading");
+    setProgress(20);
+
+    // Simulate upload + processing (will be replaced with real Remove.bg API via n8n)
+    await new Promise(r => setTimeout(r, 800));
+    setProgress(50);
+    setState("processing");
+    await new Promise(r => setTimeout(r, 2000));
+    setProgress(90);
+    await new Promise(r => setTimeout(r, 500));
+    setProgress(100);
+
+    // For now, show the original as "result" — will be replaced with actual API
+    setResultUrl(preview);
+    setState("done");
+    toast({ title: "Background removed successfully!" });
   };
+
+  const handleReset = () => {
+    setFile(null);
+    setPreview(null);
+    setResultUrl(null);
+    setState("idle");
+    setProgress(0);
+    setErrorMsg("");
+  };
+
+  const sidebarLinks = [
+    { icon: Upload, label: "Upload", active: true },
+    { icon: History, label: "History" },
+    { icon: CreditCard, label: "Credits" },
+    { icon: Settings, label: "Settings" },
+  ];
 
   return (
     <div className="h-screen bg-background flex">
-      {/* Left sidebar - Navigation (hidden on mobile when chat is open) */}
-      <div className={`w-16 bg-secondary flex-col items-center py-6 gap-6 hidden md:flex`}>
-        <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center">
-          <span className="font-display text-secondary font-semibold text-xs">A</span>
+      {/* Sidebar */}
+      <div className="w-16 md:w-64 bg-card border-r border-border/30 flex flex-col">
+        <div className="p-4 flex items-center gap-2.5 border-b border-border/30">
+          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
+            <span className="font-display text-white font-bold text-sm">R</span>
+          </div>
+          <span className="font-display text-lg font-bold text-foreground hidden md:block">
+            Removix <span className="text-gradient">AI</span>
+          </span>
         </div>
-        <div className="flex-1 flex flex-col items-center gap-2 mt-4">
+
+        <div className="flex-1 p-2 space-y-1">
           {sidebarLinks.map((link) => (
             <button
               key={link.label}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-body ${
                 link.active
-                  ? "bg-primary/20 text-primary"
-                  : "text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10"
+                  ? "bg-primary/10 text-primary font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
               }`}
-              title={link.label}
             >
-              <link.icon className="w-5 h-5" />
+              <link.icon className="w-5 h-5 flex-shrink-0" />
+              <span className="hidden md:block">{link.label}</span>
             </button>
           ))}
         </div>
-        <div className="flex flex-col items-center gap-2">
-          <button className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10 transition-all" title="Settings">
-            <Settings className="w-5 h-5" />
-          </button>
+
+        {/* Credits */}
+        <div className="p-3 border-t border-border/30">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary">
+            <Zap className="w-4 h-4 text-primary flex-shrink-0" />
+            <div className="hidden md:block flex-1">
+              <p className="text-xs text-muted-foreground font-body">Credits left</p>
+              <p className="text-sm font-bold text-foreground font-body">5 / 5 today</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-3 border-t border-border/30">
           <button
             onClick={async () => { await signOut(); navigate("/"); }}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary-foreground/50 hover:text-secondary-foreground hover:bg-secondary-foreground/10 transition-all"
-            title="Sign Out"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all text-sm font-body"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <span className="hidden md:block">Sign Out</span>
           </button>
         </div>
       </div>
 
-      {/* Conversations list */}
-      <div className={`w-full md:w-80 border-r border-border bg-card flex flex-col ${mobileShowChat ? "hidden md:flex" : "flex"}`}>
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-xl font-medium text-foreground">Messages</h2>
-            <div className="flex items-center gap-2">
-              <button className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
-                <Bell className="w-4 h-4" />
-              </button>
-              <NewChatDialog onCreated={refetch} />
-            </div>
-          </div>
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="h-14 border-b border-border/30 flex items-center justify-between px-6">
+          <h1 className="font-display text-lg font-bold text-foreground">Upload & Remove</h1>
+          <p className="text-sm font-body text-muted-foreground">
+            Welcome, <span className="text-foreground">{user?.user_metadata?.display_name || user?.email}</span>
+          </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {convosLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 rounded-full gradient-gold animate-gold-pulse" />
-            </div>
-          ) : conversations.length === 0 ? (
-            <div className="text-center py-12 px-4">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                <MessageCircle className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground font-body">No conversations yet</p>
-              <p className="text-xs text-muted-foreground/70 font-body mt-1">Start a new chat using the + button above</p>
-            </div>
-          ) : (
-            conversations.map((convo) => (
-              <motion.button
-                key={convo.id}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setSelectedConvoId(convo.id);
-                  setMobileShowChat(true);
-                }}
-                className={`w-full p-4 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left ${
-                  selectedConvoId === convo.id ? "bg-muted/80" : ""
-                }`}
-              >
-                <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                  <span className="font-display text-secondary-foreground text-sm font-medium">
-                    {getConvoInitials(convo)}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-body font-medium text-sm text-foreground truncate">
-                      {getConvoDisplayName(convo)}
-                    </span>
-                    {convo.last_message && (
-                      <span className="text-xs text-muted-foreground font-body">
-                        {formatTime(convo.last_message.created_at)}
-                      </span>
-                    )}
-                  </div>
-                  {convo.last_message && (
-                    <p className="text-xs text-muted-foreground font-body truncate mt-0.5">
-                      {convo.last_message.sender_id === user?.id ? "You: " : ""}
-                      {convo.last_message.content}
-                    </p>
-                  )}
-                </div>
-                {convo.unread_count > 0 && (
-                  <div className="w-5 h-5 rounded-full gradient-gold flex items-center justify-center flex-shrink-0">
-                    <span className="text-[10px] font-body font-bold text-secondary">{convo.unread_count}</span>
-                  </div>
-                )}
-              </motion.button>
-            ))
-          )}
-        </div>
-
-        {/* Wallet */}
-        <div className="p-4 border-t border-border">
-          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-muted">
-            <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-primary" />
-              <span className="text-xs font-body text-muted-foreground">Wallet</span>
-            </div>
-            <span className="font-mono text-sm text-foreground font-medium">₹1,240.50</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main chat area */}
-      <div className={`flex-1 flex flex-col ${!mobileShowChat ? "hidden md:flex" : "flex"}`}>
-        {selectedConvo ? (
-          <>
-            <div className="h-16 border-b border-border flex items-center justify-between px-4 md:px-6">
-              <div className="flex items-center gap-3">
-                <button
-                  className="md:hidden w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground"
-                  onClick={() => setMobileShowChat(false)}
+        {/* Upload area */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-4xl mx-auto">
+            <AnimatePresence mode="wait">
+              {!file ? (
+                <motion.div
+                  key="upload"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
                 >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
-                  <span className="font-display text-secondary-foreground text-xs font-medium">
-                    {getConvoInitials(selectedConvo)}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-body font-medium text-sm text-foreground">
-                    {getConvoDisplayName(selectedConvo)}
-                  </h3>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="rounded-xl">
-                  <Phone className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="rounded-xl">
-                  <Video className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3">
-              {msgsLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 rounded-full gradient-gold animate-gold-pulse" />
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-sm text-muted-foreground font-body">No messages yet. Say hello!</p>
-                </div>
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`relative rounded-2xl border-2 border-dashed p-16 text-center cursor-pointer transition-all ${
+                      dragOver
+                        ? "border-primary bg-primary/5 shadow-premium"
+                        : "border-border hover:border-primary/50 hover:bg-card"
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleFile(f);
+                      }}
+                    />
+                    <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-5">
+                      <Upload className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+                      Drop your image here
+                    </h3>
+                    <p className="text-sm text-muted-foreground font-body mb-4">
+                      or click to browse. Supports JPG, PNG, WEBP up to 10MB.
+                    </p>
+                    <Button variant="outline" size="sm" className="pointer-events-none">
+                      Browse Files
+                    </Button>
+                  </div>
+                </motion.div>
               ) : (
-                messages.map((msg) => {
-                  const isMe = msg.sender_id === user?.id;
-                  return (
-                    <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`max-w-[75%] sm:max-w-xs rounded-[18px] px-4 py-2.5 ${
-                          isMe
-                            ? "rounded-tr-[4px] bg-secondary"
-                            : "rounded-tl-[4px] bg-muted"
-                        }`}
-                      >
-                        <p className={`text-sm font-body ${isMe ? "text-secondary-foreground" : "text-foreground"}`}>
-                          {msg.content}
-                        </p>
-                        <span
-                          className={`text-[10px] font-body mt-1 block ${
-                            isMe ? "text-secondary-foreground/60 text-right" : "text-muted-foreground"
-                          }`}
-                        >
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          {isMe && ` ${statusIcon(msg.status)}`}
+                <motion.div
+                  key="preview"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  {/* Image preview */}
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Original */}
+                    <div className="glass-card rounded-2xl p-4 neon-border">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider">
+                          Original
                         </span>
+                        <button onClick={handleReset} className="text-muted-foreground hover:text-foreground">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="aspect-square rounded-lg overflow-hidden bg-secondary flex items-center justify-center">
+                        <img
+                          src={preview!}
+                          alt="Original"
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground font-body mt-2 truncate">
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(1)}MB)
+                      </p>
+                    </div>
+
+                    {/* Result */}
+                    <div className="glass-card rounded-2xl p-4 neon-border">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider">
+                          Result
+                        </span>
+                        {state === "done" && (
+                          <div className="flex items-center gap-1 text-xs text-primary font-body">
+                            <Check className="w-3 h-3" />
+                            Done
+                          </div>
+                        )}
+                      </div>
+                      <div className="aspect-square rounded-lg overflow-hidden bg-secondary flex items-center justify-center" style={{
+                        backgroundImage: state === "done" ? "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\"><rect width=\"10\" height=\"10\" fill=\"%23222\"/><rect x=\"10\" y=\"10\" width=\"10\" height=\"10\" fill=\"%23222\"/><rect x=\"10\" width=\"10\" height=\"10\" fill=\"%23333\"/><rect y=\"10\" width=\"10\" height=\"10\" fill=\"%23333\"/></svg>')" : "none",
+                        backgroundSize: "20px 20px",
+                      }}>
+                        {state === "idle" && (
+                          <div className="text-center p-4">
+                            <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                            <p className="text-xs text-muted-foreground font-body">Click "Remove Background" to process</p>
+                          </div>
+                        )}
+                        {(state === "uploading" || state === "processing") && (
+                          <div className="text-center p-4">
+                            <Loader2 className="w-8 h-8 text-primary mx-auto mb-2 animate-spin" />
+                            <p className="text-xs text-muted-foreground font-body">
+                              {state === "uploading" ? "Uploading..." : "AI is processing..."}
+                            </p>
+                          </div>
+                        )}
+                        {state === "done" && resultUrl && (
+                          <img
+                            src={resultUrl}
+                            alt="Result"
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        )}
+                        {state === "error" && (
+                          <div className="text-center p-4">
+                            <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
+                            <p className="text-xs text-destructive font-body">{errorMsg}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
+                  </div>
 
-            <div className="p-4 border-t border-border">
-              <div className="flex items-center gap-3">
-                <button className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-secondary hover:opacity-90 transition-opacity flex-shrink-0">
-                  <Plus className="w-5 h-5" />
-                </button>
-                <Input
-                  placeholder="Type a message..."
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="flex-1 h-11 rounded-full bg-muted border-none font-body"
-                />
-                <Button
-                  variant="gold"
-                  size="icon"
-                  className="rounded-full w-11 h-11 flex-shrink-0"
-                  onClick={handleSend}
-                  disabled={!messageInput.trim()}
-                >
-                  <Send className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <MessageCircle className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="font-display text-xl text-foreground mb-1">Select a conversation</h3>
-              <p className="text-sm text-muted-foreground font-body">Choose a chat or start a new one</p>
-            </div>
+                  {/* Progress bar */}
+                  {(state === "uploading" || state === "processing") && (
+                    <div className="space-y-2">
+                      <Progress value={progress} className="h-2 bg-secondary [&>div]:gradient-primary" />
+                      <p className="text-xs text-muted-foreground font-body text-center">
+                        {state === "uploading" ? "Uploading image..." : "AI processing in progress..."}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-center gap-4">
+                    {state === "idle" && (
+                      <Button variant="gradient" size="lg" onClick={handleProcess}>
+                        <Zap className="w-5 h-5" />
+                        Remove Background
+                      </Button>
+                    )}
+                    {state === "done" && (
+                      <>
+                        <Button variant="gradient" size="lg" asChild>
+                          <a href={resultUrl!} download="removix-result.png">
+                            <Download className="w-5 h-5" />
+                            Download Result
+                          </a>
+                        </Button>
+                        <Button variant="outline" size="lg" onClick={handleReset}>
+                          Upload Another
+                        </Button>
+                      </>
+                    )}
+                    {state === "error" && (
+                      <Button variant="outline" size="lg" onClick={handleProcess}>
+                        Retry
+                      </Button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
