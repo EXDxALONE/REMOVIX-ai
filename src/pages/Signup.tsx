@@ -20,9 +20,9 @@ const Signup = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleStep1 = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !email.trim()) {
+    if (!username.trim() || !email.trim() || !password) {
       toast({ title: "Please fill in all fields", variant: "destructive" });
       return;
     }
@@ -30,29 +30,25 @@ const Signup = () => {
       toast({ title: "Username must be at least 3 characters", variant: "destructive" });
       return;
     }
-    setStep(2);
-  };
-
-  const handleStep2 = async (e: React.FormEvent) => {
-    e.preventDefault();
     if (password.length < 6) {
       toast({ title: "Password must be at least 6 characters", variant: "destructive" });
       return;
     }
-    if (password !== confirmPassword) {
-      toast({ title: "Passwords do not match", variant: "destructive" });
-      return;
-    }
+
     setIsLoading(true);
-    const { error } = await signUp(email, password, {
+    const { data, error } = await signUp(email, password, {
       username,
       display_name: username,
     });
     setIsLoading(false);
+
     if (error) {
       toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
+    } else if (data?.session) {
+      // If email confirmation is disabled, user is logged in automatically.
+      navigate("/dashboard");
     } else {
-      setStep(3);
+      setStep(2); // Move to the 'Check email' success screen
     }
   };
 
@@ -75,28 +71,10 @@ const Signup = () => {
           <p className="text-muted-foreground font-body mt-2">Start removing backgrounds for free</p>
         </div>
 
-        {/* Progress */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          {[1, 2, 3].map((s) => (
-            <div
-              key={s}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                s === step ? "w-8 gradient-primary" : s < step ? "w-8 bg-primary/50" : "w-8 bg-muted"
-              }`}
-            />
-          ))}
-        </div>
-
-        <div className="glass-card rounded-2xl p-8">
-          {step === 1 && (
-            <motion.form
-              key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-5"
-              onSubmit={handleStep1}
-            >
-              <div className="space-y-2">
+        {step === 1 ? (
+          <div className="glass-card rounded-2xl p-8">
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div className="space-y-1.5">
                 <Label htmlFor="username" className="font-body text-sm text-foreground">Username</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -105,11 +83,12 @@ const Signup = () => {
                     placeholder="Choose a username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 h-12 rounded-lg bg-secondary border-border font-body"
+                    className="pl-10 h-11 rounded-lg bg-secondary border-border font-body"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
+
+              <div className="space-y-1.5">
                 <Label htmlFor="email" className="font-body text-sm text-foreground">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -119,23 +98,12 @@ const Signup = () => {
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-12 rounded-lg bg-secondary border-border font-body"
+                    className="pl-10 h-11 rounded-lg bg-secondary border-border font-body"
                   />
                 </div>
               </div>
-              <Button variant="gradient" size="lg" className="w-full" type="submit">Continue</Button>
-            </motion.form>
-          )}
 
-          {step === 2 && (
-            <motion.form
-              key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-5"
-              onSubmit={handleStep2}
-            >
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="password" className="font-body text-sm text-foreground">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -145,7 +113,7 @@ const Signup = () => {
                     placeholder="Create a secure password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 h-12 rounded-lg bg-secondary border-border font-body"
+                    className="pl-10 pr-10 h-11 rounded-lg bg-secondary border-border font-body"
                   />
                   <button
                     type="button"
@@ -156,61 +124,40 @@ const Signup = () => {
                   </button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="font-body text-sm text-foreground">Confirm Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 h-12 rounded-lg bg-secondary border-border font-body"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button variant="outline" size="lg" className="flex-1" type="button" onClick={() => setStep(1)}>Back</Button>
-                <Button variant="gradient" size="lg" className="flex-1" type="submit" disabled={isLoading}>
-                  {isLoading ? "Creating..." : "Create Account"}
-                </Button>
-              </div>
-            </motion.form>
-          )}
 
-          {step === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-6 text-center"
-            >
-              <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto">
-                <Shield className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h3 className="font-display text-xl font-semibold text-foreground mb-2">Check your email</h3>
-                <p className="text-sm text-muted-foreground font-body leading-relaxed">
-                  We've sent a verification link to <strong className="text-foreground">{email}</strong>.
-                  Click the link to verify your account and get started.
-                </p>
-              </div>
-              <Button variant="gradient" size="lg" className="w-full" onClick={() => navigate("/login")}>
-                Go to Sign In
+              <Button variant="gradient" size="lg" className="w-full mt-2" type="submit" disabled={isLoading}>
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
-            </motion.div>
-          )}
+            </form>
 
-          {step !== 3 && (
             <div className="mt-6 text-center">
               <p className="text-sm font-body text-muted-foreground">
                 Already have an account?{" "}
                 <Link to="/login" className="text-primary hover:underline font-medium">Sign in</Link>
               </p>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="glass-card rounded-2xl p-8 space-y-6 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto">
+              <Shield className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="font-display text-xl font-semibold text-foreground mb-2">Check your email</h3>
+              <p className="text-sm text-muted-foreground font-body leading-relaxed">
+                We've sent a verification link to <strong className="text-foreground">{email}</strong>.
+                Click the link to verify your account and get started.
+              </p>
+            </div>
+            <Button variant="gradient" size="lg" className="w-full" onClick={() => navigate("/login")}>
+              Go to Sign In
+            </Button>
+          </motion.div>
+        )}
       </motion.div>
     </div>
   );
