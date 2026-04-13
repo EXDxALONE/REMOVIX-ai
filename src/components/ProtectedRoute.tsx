@@ -7,7 +7,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-10 h-10 rounded-full gradient-gold animate-gold-pulse" />
+        <div className="w-10 h-10 rounded-full gradient-primary animate-gold-pulse" />
       </div>
     );
   }

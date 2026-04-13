@@ -17,9 +17,7 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/60 backdrop-blur-xl border-b border-border/30">
       <div className="container mx-auto flex items-center justify-between h-16 px-6">
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-            <span className="font-display text-white font-bold text-sm">R</span>
-          </div>
+          <img src="/logo.png" alt="Removix AI Logo" className="w-8 h-8" />
           <span className="font-display text-xl font-bold tracking-tight text-foreground">
             Removix <span className="text-gradient">AI</span>
           </span>

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useImageHistory } from "@/hooks/useImageHistory";
+import { HistoryTab } from "@/components/HistoryTab";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -22,12 +24,13 @@ const Dashboard = () => {
   const [state, setState] = useState<ProcessingState>("idle");
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
-  const [showBefore, setShowBefore] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addHistoryEntry } = useImageHistory();
+  const [activeTab, setActiveTab] = useState("upload");
 
   const validateFile = (f: File): string | null => {
     if (!ALLOWED_TYPES.includes(f.type)) return "Unsupported format. Use JPG, PNG, or WEBP.";
@@ -60,19 +63,39 @@ const Dashboard = () => {
     setState("uploading");
     setProgress(20);
 
-    // Simulate upload + processing (will be replaced with real Remove.bg API via n8n)
-    await new Promise(r => setTimeout(r, 800));
-    setProgress(50);
-    setState("processing");
-    await new Promise(r => setTimeout(r, 2000));
-    setProgress(90);
-    await new Promise(r => setTimeout(r, 500));
-    setProgress(100);
+    try {
+      const response = await fetch("https://alone3333.app.n8n.cloud/webhook/remove-background", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+        body: file,
+      });
 
-    // For now, show the original as "result" — will be replaced with actual API
-    setResultUrl(preview);
-    setState("done");
-    toast({ title: "Background removed successfully!" });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Webhook error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const resultJson = await response.json();
+      const imageUrl = resultJson.url;
+
+      if (!imageUrl) {
+        throw new Error("Webhook response did not contain a 'url' field.");
+      }
+
+      setProgress(100);
+      setResultUrl(imageUrl);
+      addHistoryEntry(preview!, imageUrl);
+      setState("done");
+      toast({ title: "Background removed successfully!" });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      console.error("Error processing image:", error);
+      setErrorMsg(errorMessage || "Failed to remove background.");
+      setState("error");
+      toast({ title: "Processing failed", description: errorMessage, variant: "destructive" });
+    }
   };
 
   const handleReset = () => {
@@ -84,244 +107,277 @@ const Dashboard = () => {
     setErrorMsg("");
   };
 
+  const handleDownload = async () => {
+    if (!resultUrl) return;
+
+    try {
+      const response = await fetch(resultUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "removix-result.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading image:", error);
+      toast({ title: "Download failed", description: "Could not download the image.", variant: "destructive" });
+    }
+  };
+
   const sidebarLinks = [
-    { icon: Upload, label: "Upload", active: true },
-    { icon: History, label: "History" },
-    { icon: CreditCard, label: "Credits" },
-    { icon: Settings, label: "Settings" },
+    { icon: Upload, label: "Upload", tab: "upload" },
+    { icon: History, label: "History", tab: "history" },
+    { icon: CreditCard, label: "Credits", tab: "credits" },
+    { icon: Settings, label: "Settings", tab: "settings" },
   ];
 
   return (
     <div className="h-screen bg-background flex">
-      {/* Sidebar */}
-      <div className="w-16 md:w-64 bg-card border-r border-border/30 flex flex-col">
-        <div className="p-4 flex items-center gap-2.5 border-b border-border/30">
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-            <span className="font-display text-white font-bold text-sm">R</span>
-          </div>
-          <span className="font-display text-lg font-bold text-foreground hidden md:block">
-            Removix <span className="text-gradient">AI</span>
-          </span>
-        </div>
-
-        <div className="flex-1 p-2 space-y-1">
-          {sidebarLinks.map((link) => (
-            <button
-              key={link.label}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-body ${
-                link.active
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              }`}
-            >
-              <link.icon className="w-5 h-5 flex-shrink-0" />
-              <span className="hidden md:block">{link.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Credits */}
-        <div className="p-3 border-t border-border/30">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary">
-            <Zap className="w-4 h-4 text-primary flex-shrink-0" />
-            <div className="hidden md:block flex-1">
-              <p className="text-xs text-muted-foreground font-body">Credits left</p>
-              <p className="text-sm font-bold text-foreground font-body">5 / 5 today</p>
+        {/* Sidebar */}
+        <div className="w-16 md:w-64 bg-card border-r border-border/30 flex flex-col">
+          {/* Logo */}
+          <div className="h-14 flex items-center gap-2.5 px-4 border-b border-border/30">
+            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
+              <span className="font-display text-white font-bold text-sm">R</span>
             </div>
+            <span className="font-display text-lg font-bold text-foreground hidden md:block">
+              Removix <span className="text-gradient">AI</span>
+            </span>
+          </div>
+
+          {/* Nav Links */}
+          <nav className="flex-1 py-4 px-2 space-y-1">
+            {sidebarLinks.map((link) => (
+              <button
+                key={link.tab}
+                onClick={() => setActiveTab(link.tab)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body transition-all duration-200 ${
+                  activeTab === link.tab
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                }`}
+              >
+                <link.icon className="w-5 h-5 flex-shrink-0" />
+                <span className="hidden md:block">{link.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          {/* Sign Out */}
+          <div className="p-2 border-t border-border/30">
+            <button
+              onClick={async () => {
+                await signOut();
+                navigate("/");
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <span className="hidden md:block">Sign Out</span>
+            </button>
           </div>
         </div>
 
-        <div className="p-3 border-t border-border/30">
-          <button
-            onClick={async () => { await signOut(); navigate("/"); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all text-sm font-body"
-          >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            <span className="hidden md:block">Sign Out</span>
-          </button>
-        </div>
-      </div>
+        {/* Main content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="h-14 border-b border-border/30 flex items-center justify-between px-6">
+            <h1 className="font-display text-lg font-bold text-foreground">
+              {activeTab === "upload" ? "Upload & Remove" : "Image History"}
+            </h1>
+            <p className="text-sm font-body text-muted-foreground">
+              Welcome, <span className="text-foreground">{user?.user_metadata?.display_name || user?.email}</span>
+            </p>
+          </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="h-14 border-b border-border/30 flex items-center justify-between px-6">
-          <h1 className="font-display text-lg font-bold text-foreground">Upload & Remove</h1>
-          <p className="text-sm font-body text-muted-foreground">
-            Welcome, <span className="text-foreground">{user?.user_metadata?.display_name || user?.email}</span>
-          </p>
-        </div>
-
-        {/* Upload area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto">
-            <AnimatePresence mode="wait">
-              {!file ? (
-                <motion.div
-                  key="upload"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                >
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                    onDragLeave={() => setDragOver(false)}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`relative rounded-2xl border-2 border-dashed p-16 text-center cursor-pointer transition-all ${
-                      dragOver
-                        ? "border-primary bg-primary/5 shadow-premium"
-                        : "border-border hover:border-primary/50 hover:bg-card"
-                    }`}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.webp"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleFile(f);
-                      }}
-                    />
-                    <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-5">
-                      <Upload className="w-7 h-7 text-white" />
-                    </div>
-                    <h3 className="font-display text-xl font-semibold text-foreground mb-2">
-                      Drop your image here
-                    </h3>
-                    <p className="text-sm text-muted-foreground font-body mb-4">
-                      or click to browse. Supports JPG, PNG, WEBP up to 10MB.
-                    </p>
-                    <Button variant="outline" size="sm" className="pointer-events-none">
-                      Browse Files
-                    </Button>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="preview"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="space-y-6"
-                >
-                  {/* Image preview */}
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* Original */}
-                    <div className="glass-card rounded-2xl p-4 neon-border">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider">
-                          Original
-                        </span>
-                        <button onClick={handleReset} className="text-muted-foreground hover:text-foreground">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="aspect-square rounded-lg overflow-hidden bg-secondary flex items-center justify-center">
-                        <img
-                          src={preview!}
-                          alt="Original"
-                          className="max-w-full max-h-full object-contain"
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground font-body mt-2 truncate">
-                        {file.name} ({(file.size / 1024 / 1024).toFixed(1)}MB)
-                      </p>
-                    </div>
-
-                    {/* Result */}
-                    <div className="glass-card rounded-2xl p-4 neon-border">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider">
-                          Result
-                        </span>
-                        {state === "done" && (
-                          <div className="flex items-center gap-1 text-xs text-primary font-body">
-                            <Check className="w-3 h-3" />
-                            Done
+          {/* Content Area */}
+          <div className="flex-1 overflow-y-auto">
+            {activeTab === "upload" && (
+              <div className="p-6">
+                <div className="max-w-4xl mx-auto">
+                  <AnimatePresence mode="wait">
+                    {!file ? (
+                      <motion.div
+                        key="upload"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                      >
+                        <div
+                          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                          onDragLeave={() => setDragOver(false)}
+                          onDrop={handleDrop}
+                          onClick={() => fileInputRef.current?.click()}
+                          className={`relative rounded-2xl border-2 border-dashed p-16 text-center cursor-pointer transition-all ${
+                            dragOver
+                              ? "border-primary bg-primary/5 shadow-premium"
+                              : "border-border hover:border-primary/50 hover:bg-card"
+                          }`}
+                        >
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleFile(f);
+                            }}
+                          />
+                          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-5">
+                            <Upload className="w-7 h-7 text-white" />
                           </div>
-                        )}
-                      </div>
-                      <div className="aspect-square rounded-lg overflow-hidden bg-secondary flex items-center justify-center" style={{
-                        backgroundImage: state === "done" ? "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\"><rect width=\"10\" height=\"10\" fill=\"%23222\"/><rect x=\"10\" y=\"10\" width=\"10\" height=\"10\" fill=\"%23222\"/><rect x=\"10\" width=\"10\" height=\"10\" fill=\"%23333\"/><rect y=\"10\" width=\"10\" height=\"10\" fill=\"%23333\"/></svg>')" : "none",
-                        backgroundSize: "20px 20px",
-                      }}>
-                        {state === "idle" && (
-                          <div className="text-center p-4">
-                            <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                            <p className="text-xs text-muted-foreground font-body">Click "Remove Background" to process</p>
+                          <h3 className="font-display text-xl font-semibold text-foreground mb-2">
+                            Drop your image here
+                          </h3>
+                          <p className="text-sm text-muted-foreground font-body mb-4">
+                            or click to browse. Supports JPG, PNG, WEBP up to 10MB.
+                          </p>
+                          <Button variant="outline" size="sm" className="pointer-events-none">
+                            Browse Files
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="preview"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                      >
+                        {/* Image preview */}
+                        <div className="grid md:grid-cols-2 gap-6">
+                          {/* Original */}
+                          <div className="glass-card rounded-2xl p-4 neon-border">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider">
+                                Original
+                              </span>
+                              <button onClick={handleReset} className="text-muted-foreground hover:text-foreground">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className="aspect-square rounded-lg overflow-hidden bg-secondary flex items-center justify-center">
+                              <img
+                                src={preview!}
+                                alt="Original"
+                                className="max-w-full max-h-full object-contain"
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground font-body mt-2 truncate">
+                              {file.name} ({(file.size / 1024 / 1024).toFixed(1)}MB)
+                            </p>
                           </div>
-                        )}
+
+                          {/* Result */}
+                          <div className="glass-card rounded-2xl p-4 neon-border">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-body font-semibold text-muted-foreground uppercase tracking-wider">
+                                Result
+                              </span>
+                              {state === "done" && (
+                                <div className="flex items-center gap-1 text-xs text-primary font-body">
+                                  <Check className="w-3 h-3" />
+                                  Done
+                                </div>
+                              )}
+                            </div>
+                            <div className="aspect-square rounded-lg overflow-hidden bg-secondary flex items-center justify-center" style={{
+                              backgroundImage: state === "done" ? "url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\"><rect width=\"10\" height=\"10\" fill=\"%23222\"/><rect x=\"10\" y=\"10\" width=\"10\" height=\"10\" fill=\"%23222\"/><rect x=\"10\" width=\"10\" height=\"10\" fill=\"%23333\"/><rect y=\"10\" width=\"10\" height=\"10\" fill=\"%23333\"/></svg>')" : "none",
+                              backgroundSize: "20px 20px",
+                            }}>
+                              {state === "idle" && (
+                                <div className="text-center p-4">
+                                  <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                                  <p className="text-xs text-muted-foreground font-body">Click "Remove Background" to process</p>
+                                </div>
+                              )}
+                              {(state === "uploading" || state === "processing") && (
+                                <div className="text-center p-4">
+                                  <Loader2 className="w-8 h-8 text-primary mx-auto mb-2 animate-spin" />
+                                  <p className="text-xs text-muted-foreground font-body">
+                                    {state === "uploading" ? "Uploading..." : "AI is processing..."}
+                                  </p>
+                                </div>
+                              )}
+                              {state === "done" && resultUrl && (
+                                <img
+                                  src={resultUrl}
+                                  alt="Result"
+                                  className="max-w-full max-h-full object-contain"
+                                />
+                              )}
+                              {state === "error" && (
+                                <div className="text-center p-4">
+                                  <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
+                                  <p className="text-xs text-destructive font-body">{errorMsg}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Progress bar */}
                         {(state === "uploading" || state === "processing") && (
-                          <div className="text-center p-4">
-                            <Loader2 className="w-8 h-8 text-primary mx-auto mb-2 animate-spin" />
-                            <p className="text-xs text-muted-foreground font-body">
-                              {state === "uploading" ? "Uploading..." : "AI is processing..."}
+                          <div className="space-y-2">
+                            <Progress value={progress} className="h-2 bg-secondary [&>div]:gradient-primary" />
+                            <p className="text-xs text-muted-foreground font-body text-center">
+                              {state === "uploading" ? "Uploading image..." : "AI processing in progress..."}
                             </p>
                           </div>
                         )}
-                        {state === "done" && resultUrl && (
-                          <img
-                            src={resultUrl}
-                            alt="Result"
-                            className="max-w-full max-h-full object-contain"
-                          />
-                        )}
-                        {state === "error" && (
-                          <div className="text-center p-4">
-                            <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
-                            <p className="text-xs text-destructive font-body">{errorMsg}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Progress bar */}
-                  {(state === "uploading" || state === "processing") && (
-                    <div className="space-y-2">
-                      <Progress value={progress} className="h-2 bg-secondary [&>div]:gradient-primary" />
-                      <p className="text-xs text-muted-foreground font-body text-center">
-                        {state === "uploading" ? "Uploading image..." : "AI processing in progress..."}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-center gap-4">
-                    {state === "idle" && (
-                      <Button variant="gradient" size="lg" onClick={handleProcess}>
-                        <Zap className="w-5 h-5" />
-                        Remove Background
-                      </Button>
+                        {/* Actions */}
+                        <div className="flex items-center justify-center gap-4">
+                          {state === "idle" && (
+                            <Button variant="gradient" size="lg" onClick={handleProcess}>
+                              <Zap className="w-5 h-5" />
+                              Remove Background
+                            </Button>
+                          )}
+                          {state === "done" && (
+                            <>
+                              <Button variant="gradient" size="lg" onClick={handleDownload}>
+                                <Download className="w-5 h-5" />
+                                Download Result
+                              </Button>
+                              <Button variant="outline" size="lg" onClick={handleReset}>
+                                Upload Another
+                              </Button>
+                            </>
+                          )}
+                          {state === "error" && (
+                            <Button variant="outline" size="lg" onClick={handleProcess}>
+                              Retry
+                            </Button>
+                          )}
+                        </div>
+                      </motion.div>
                     )}
-                    {state === "done" && (
-                      <>
-                        <Button variant="gradient" size="lg" asChild>
-                          <a href={resultUrl!} download="removix-result.png">
-                            <Download className="w-5 h-5" />
-                            Download Result
-                          </a>
-                        </Button>
-                        <Button variant="outline" size="lg" onClick={handleReset}>
-                          Upload Another
-                        </Button>
-                      </>
-                    )}
-                    {state === "error" && (
-                      <Button variant="outline" size="lg" onClick={handleProcess}>
-                        Retry
-                      </Button>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </AnimatePresence>
+                </div>
+              </div>
+            )}
+            {activeTab === "history" && <HistoryTab />}
+            {activeTab === "credits" && (
+              <div className="p-6 text-center text-muted-foreground">
+                <h2 className="font-display text-2xl font-bold text-foreground mb-4">Credits</h2>
+                <p>Credit management coming soon!</p>
+              </div>
+            )}
+            {activeTab === "settings" && (
+              <div className="p-6 text-center text-muted-foreground">
+                <h2 className="font-display text-2xl font-bold text-foreground mb-4">Settings</h2>
+                <p>User settings coming soon!</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
-    </div>
   );
 };
 
